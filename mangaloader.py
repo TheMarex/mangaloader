@@ -273,5 +273,5 @@ elif len(sys.argv) < 2:
     sys.exit()
 
 page = BleachExile()
-downloader = Downloader(page, sys.argv[1])
+downloader = Downloader(page, sys.argv[1], chapters)
 downloader.run()
