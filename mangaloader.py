@@ -223,7 +223,8 @@ class Downloader:
         self._path = path.join(MANGA_DIR, name)
         self._chapters = chapters
 
-        self._zipper = Zipper(self._path, wait=5)
+        self._zipper = Zipper(self._path, list(), wait=5)
+        self._zipper.stay_alive(True)
         self._zipper.daemon = True
         self._zipper.start()
 
@@ -239,7 +240,8 @@ class Downloader:
             job = Job(self._page, chapters[cid], chapter_dir)
             print "Downloading Chapter %s" % cid
             job.run()
-        time.sleep(20)
+            self._zipper.add_job(cid)
+        self._zipper.stay_alive(False)
         self._zipper.join()
 
     def get_manga_name(self, name):
