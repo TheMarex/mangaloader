@@ -159,14 +159,14 @@ class Job:
     _page = None
     _url = ""
     _dir = ""
-    _downloads = None
-    _max_downloads = 10
+    _workers = None
+    _max_workers = 10
     
     def __init__(self, page, chapter_url, target_dir):
         self._page = page
         self._dir = target_dir
         self._url = chapter_url
-        self._downloads = []
+        self._workers = []
 
         if not path.exists(self._dir):
             os.makedirs(self._dir)
@@ -179,36 +179,41 @@ class Job:
             return
         
         urls = page.get_chapter_images(self._url)
-        for url in urls:
-            self._wait_for_free_slot()
-            self._download_file(url)
-
-        # wait until all downloads are finished
-        self._max_downloads = 0
-        self._wait_for_free_slot()
+        self._max_workers = min(len(urls), self._max_workers)
+        queues = []
+        for i in range(self._max_workers):
+            queues.append([])
+        for i, url in enumerate(urls):
+            q = queues[i % self._max_workers]
+            q.append(url)
+        for q in queues:
+            self._create_worker(q)
+        self._wait_to_finish()
 
         f = open("DONE", "w+")
         f.write("%i" % len(urls))
         f.close()
 
-    def _wait_for_free_slot(self):
-        while len(self._downloads) > self._max_downloads:
+    def _wait_to_finish(self):
+        while len(self._workers) > 0:
             changed = False
-            for d in list(self._downloads):
+            for w in list(self._workers):
                 # check if process is still running
-                if d.poll:
+                if w.poll:
                     changed = True
-                    self._downloads.remove(d)
+                    self._workers.remove(w)
             # don't check more than 5 times per sec
             if not changed:
                 time.sleep(0.1)
 
-    def _download_file(self, url):
-        cmd = "wget -c -q \"%s\"" % url
+    def _create_worker(self, urls):
+        # espace all urls
+        urls = map(lambda x: "\"%s\"" % x, urls)
+        cmd = "wget -c -q %s" % " ".join(urls)
         cmd = shlex.split(cmd)
         proc = subprocess.Popen(cmd)
         
-        self._downloads.append(proc)
+        self._workers.append(proc)
                 
 class Downloader:
     _name = ""
@@ -220,7 +225,7 @@ class Downloader:
     def __init__(self, page, name, chapters=None):
         self._page = page
         self._name = self.get_manga_name(name)
-        self._path = path.join(MANGA_DIR, name)
+        self._path = path.join(MANGA_DIR, self._name)
         self._chapters = chapters
 
         self._zipper = Zipper(self._path, list(), wait=5)
