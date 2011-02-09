@@ -68,9 +68,11 @@ class Zipper(threading.Thread):
             f = open(done)
             l = f.read()
             f.close()
-            files.remove("DONE")
         else:
             l = "DONE."
+
+        if "DONE" in files:
+            files.remove("DONE")
 
         # Check if all files are written to disk. ext4 work-a-round
         if l != "DONE." and int(l) != len(files):
