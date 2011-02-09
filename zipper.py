@@ -77,6 +77,8 @@ class Zipper(threading.Thread):
         # Check if all files are written to disk. ext4 work-a-round
         if l != "DONE." and int(l) != len(files):
             return False
+        # Trust me, this saves some headaches for ext4 -_-
+        time.sleep(0.5)
         files = map(lambda x: "\"%s\"" % path.join(chapter_dir, x), files)
         files = sorted(files)
         files = " ".join(files)
